@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>oak studio · system</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Top info grid */
+  .info-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 900px) { .info-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .info-tile {
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .info-tile-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-2); margin-bottom: 6px;
+  }
+  .info-tile-value {
+    font-size: 14px; font-family: var(--font-mono);
+    color: var(--text-0); word-break: break-all;
+  }
+  .info-tile-sub {
+    font-size: 11px; color: var(--text-2); margin-top: 4px;
+    font-family: var(--font-mono);
+  }
+  .info-tile-value.accent { color: var(--accent); }
+  .info-tile-value.info { color: var(--info); }
+
+  /* Resource gauges */
+  .resource-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+  }
+  @media (max-width: 900px) { .resource-grid { grid-template-columns: repeat(2, 1fr); } }
+
+  .resource-tile {
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+  }
+  .resource-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .resource-label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-2);
+  }
+  .resource-value {
+    font-size: 20px; font-family: var(--font-mono); font-weight: 500;
+    color: var(--text-0); letter-spacing: -0.02em;
+  }
+  .resource-value.warn { color: var(--warn); }
+  .resource-value.danger { color: var(--danger); }
+  .resource-bar {
+    height: 4px; background: var(--bg-3); border-radius: 2px; overflow: hidden;
+    margin-bottom: 6px;
+  }
+  .resource-bar-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    transition: width 0.5s ease, background 0.3s;
+  }
+  .resource-bar-fill.warn { background: var(--warn); }
+  .resource-bar-fill.danger { background: var(--danger); }
+  .resource-sub {
+    font-size: 11px; color: var(--text-2); font-family: var(--font-mono);
+  }
+
+  /* Split */
+  .sys-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 16px;
+    margin-top: 20px;
+  }
+  @media (max-width: 1000px) { .sys-split { grid-template-columns: 1fr; } }
+
+  /* Log viewer */
+  .log-card { display: flex; flex-direction: column; gap: 10px; }
+  .log-controls {
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .log-search {
+    background: var(--bg-2); border: 1px solid var(--border-soft);
+    border-radius: var(--radius-sm); padding: 4px 9px;
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-0); flex: 1; min-width: 160px; outline: none;
+  }
+  .log-search:focus { border-color: var(--accent-dim); }
+
+  .log-viewer {
+    font-family: var(--font-mono); font-size: 11px;
+    background: var(--bg-0); border: 1px solid var(--border-soft);
+    border-radius: var(--radius); padding: 8px 10px;
+    color: var(--text-1); line-height: 1.7;
+    height: 420px; overflow-y: auto;
+    display: flex; flex-direction: column-reverse;
+  }
+  .log-line { display: flex; gap: 10px; padding: 1px 0; }
+  .log-line .ts { color: var(--text-3); flex-shrink: 0; width: 70px; }
+  .log-line .level { flex-shrink: 0; width: 44px; font-weight: 500; }
+  .log-line .source {
+    flex-shrink: 0; width: 80px; color: var(--text-2);
+  }
+  .log-line .msg { color: var(--text-1); flex: 1; min-width: 0; }
+  .log-line.info  .level { color: var(--text-1); }
+  .log-line.ok    .level { color: var(--accent); }
+  .log-line.warn  .level { color: var(--warn); }
+  .log-line.error .level { color: var(--danger); }
+  .log-line.debug .level { color: var(--text-3); }
+
+  .log-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--text-2); font-family: var(--font-mono);
+  }
+
+  /* Update card */
+  .update-status {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg-2); border-radius: var(--radius);
+    padding: 12px 14px; gap: 12px;
+  }
+  .update-status.has-update {
+    background: var(--info-bg); border: 1px solid rgba(127,119,221,0.2);
+  }
+  .update-info { flex: 1; }
+  .update-version {
+    font-family: var(--font-mono); font-size: 13px; color: var(--text-0);
+  }
+  .update-meta {
+    font-size: 11px; color: var(--text-2); margin-top: 2px;
+    font-family: var(--font-mono);
+  }
+  .update-status.has-update .update-version { color: var(--info); }
+
+  /* Danger zone */
+  .danger-zone {
+    background: var(--bg-1);
+    border: 1px solid rgba(226,75,74,0.2);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+  }
+  .danger-zone-head {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--danger); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .danger-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 0; border-bottom: 1px solid var(--border-soft);
+    gap: 12px;
+  }
+  .danger-row:last-child { border-bottom: none; }
+  .danger-row .info { flex: 1; min-width: 0; }
+  .danger-row .info .name {
+    font-size: 13px; color: var(--text-0); margin-bottom: 2px;
+  }
+  .danger-row .info .desc {
+    font-size: 11px; color: var(--text-1); line-height: 1.5;
+  }
+
+  /* Modal — confirmation */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 480px; max-width: 92vw;
+    padding: 24px 26px;
+  }
+  .modal.danger { border-color: rgba(226,75,74,0.4); }
+  .modal-head {
+    display: flex; gap: 12px; align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .modal-icon {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 18px;
+  }
+  .modal-icon.warn { background: var(--warn-bg); color: var(--warn); }
+  .modal-icon.danger { background: var(--danger-bg); color: var(--danger); }
+  .modal-title { font-size: 16px; font-weight: 500; margin: 0; }
+  .modal-body { font-size: 13px; color: var(--text-1); line-height: 1.6; }
+  .modal-body p { margin: 0 0 10px; }
+  .modal-body ul { margin: 0; padding-left: 20px; }
+  .modal-body li { margin-bottom: 4px; }
+  .modal-foot {
+    display: flex; justify-content: flex-end; gap: 8px;
+    margin-top: 20px; padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .confirm-input {
+    margin-top: 16px;
+  }
+  .confirm-input label {
+    font-size: 11px; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.08em;
+    display: block; margin-bottom: 6px;
+  }
+  .confirm-input input { width: 100%; font-family: var(--font-mono); }
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+
+<script src="app.js"></script>
+<script>
+const SYS = {
+  paused: false,
+  query: '',
+  confirmModal: null,  // null | 'restart' | 'reboot' | 'factory-reset'
+  resetConfirmText: '',
+};
+
+const LOG_TEMPLATES = [
+  { level: 'info',  source: 'pipeline',  msg: 'frame received from cam 1 · 28fps' },
+  { level: 'info',  source: 'pipeline',  msg: 'frame received from cam 2 · 30fps' },
+  { level: 'info',  source: 'osc',       msg: 'sent 24 messages to 192.168.1.100:7000' },
+  { level: 'info',  source: 'osc',       msg: 'sent 8 messages to 192.168.1.115:9000' },
+  { level: 'debug', source: 'depthai',   msg: 'pose inference completed in 24ms' },
+  { level: 'debug', source: 'depthai',   msg: 'object detection completed in 18ms' },
+  { level: 'ok',    source: 'pipeline',  msg: 'model swap complete: red_ball_v2 → red_ball_v3' },
+  { level: 'warn',  source: 'cam3',      msg: 'FPS dropped to 14 — pi-side inference saturated' },
+  { level: 'info',  source: 'webui',     msg: 'GET /api/cameras 200 · 12ms' },
+  { level: 'info',  source: 'webui',     msg: 'POST /api/models/deploy 200 · 340ms' },
+  { level: 'debug', source: 'mdns',      msg: 'advertising oak-studio-pi.local on eth0' },
+  { level: 'info',  source: 'system',    msg: 'cpu 38% · mem 42% · temp 52°C' },
+  { level: 'ok',    source: 'osc',       msg: 'target 192.168.1.100:7000 reachable · ping 2ms' },
+];
+
+function nowTs() {
+  const d = new Date();
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+}
+
+function makeLogLine() {
+  const t = LOG_TEMPLATES[Math.floor(Math.random() * LOG_TEMPLATES.length)];
+  if (SYS.query && !(t.msg + ' ' + t.source + ' ' + t.level).toLowerCase().includes(SYS.query.toLowerCase())) {
+    return null;
+  }
+  return `
+    <div class="log-line ${t.level}">
+      <span class="ts">${nowTs()}</span>
+      <span class="level">${t.level.toUpperCase()}</span>
+      <span class="source">${t.source}</span>
+      <span class="msg">${t.msg}</span>
+    </div>
+  `;
+}
+
+function tickLog() {
+  if (SYS.paused) return;
+  const log = document.getElementById('sys-log');
+  if (!log) return;
+  const count = 2 + Math.floor(Math.random() * 2);
+  for (let i = 0; i < count; i++) {
+    const row = makeLogLine();
+    if (row) {
+      const div = document.createElement('div');
+      div.innerHTML = row;
+      log.insertBefore(div.firstElementChild, log.firstChild);
+    }
+  }
+  while (log.children.length > 300) log.removeChild(log.lastChild);
+
+  const stats = document.getElementById('log-stats');
+  if (stats) stats.textContent = `${log.children.length} lines shown`;
+}
+
+function renderConfirmModal() {
+  if (!SYS.confirmModal) return '';
+
+  const variants = {
+    'restart': {
+      icon: 'warn',
+      title: 'Restart pipeline?',
+      body: `<p>This will stop and restart the detection pipeline. All cameras will briefly drop their OSC streams (typically 2–5 seconds).</p>
+             <p>The web UI and network connection are not affected.</p>`,
+      confirmLabel: 'Restart pipeline',
+      confirmClass: '',
+      requireText: false,
+    },
+    'reboot': {
+      icon: 'warn',
+      title: 'Reboot device?',
+      body: `<p>This will fully reboot the Raspberry Pi. The device will be unreachable for approximately <strong style="color:var(--text-0)">60–90 seconds</strong>.</p>
+             <p>All OSC streams will be interrupted. The system will restart automatically with the current configuration.</p>`,
+      confirmLabel: 'Reboot device',
+      confirmClass: '',
+      requireText: false,
+    },
+    'factory-reset': {
+      icon: 'danger',
+      title: 'Factory reset device?',
+      body: `<p style="color:var(--danger)"><strong>This action cannot be undone.</strong></p>
+             <p>Factory reset will erase:</p>
+             <ul>
+               <li>All camera configurations and zone definitions</li>
+               <li>All deployed custom models</li>
+               <li>OSC target settings</li>
+               <li>Network settings (back to DHCP)</li>
+               <li>Hostname and discovery settings</li>
+             </ul>
+             <p>Your license activation will be preserved.</p>`,
+      confirmLabel: 'Factory reset',
+      confirmClass: 'danger',
+      requireText: 'RESET',
+    },
+  };
+
+  const v = variants[SYS.confirmModal];
+  const canConfirm = !v.requireText || SYS.resetConfirmText === v.requireText;
+
+  return `
+    <div class="modal-backdrop" id="modal-bd">
+      <div class="modal ${v.confirmClass || ''}">
+        <div class="modal-head">
+          <div class="modal-icon ${v.icon}">${v.icon === 'danger' ? '⚠' : '⚠'}</div>
+          <div style="flex:1">
+            <h2 class="modal-title">${v.title}</h2>
+          </div>
+        </div>
+        <div class="modal-body">${v.body}</div>
+        ${v.requireText ? `
+          <div class="confirm-input">
+            <label>Type <span style="color:var(--danger);font-family:var(--font-mono)">${v.requireText}</span> to confirm</label>
+            <input type="text" id="confirm-text" value="${SYS.resetConfirmText}" autocomplete="off">
+          </div>
+        ` : ''}
+        <div class="modal-foot">
+          <button id="modal-cancel">Cancel</button>
+          <button class="${v.confirmClass === 'danger' ? 'danger' : 'primary'}"
+                  id="modal-confirm"
+                  ${!canConfirm ? 'disabled style="opacity:0.4;pointer-events:none"' : ''}>
+            ${v.confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPage() {
+  const cpu = jitter(MOCK.device.cpu, 6);
+  const mem = jitter(MOCK.device.mem, 3);
+  const temp = jitter(MOCK.device.temp, 2);
+  const diskPct = Math.round((1 - MOCK.system.disk_free_gb / MOCK.system.disk_total_gb) * 100);
+
+  const cpuLevel = cpu > 80 ? 'danger' : cpu > 60 ? 'warn' : '';
+  const memLevel = mem > 80 ? 'danger' : mem > 60 ? 'warn' : '';
+  const tempLevel = temp > 75 ? 'danger' : temp > 65 ? 'warn' : '';
+
+  const mainHTML = `
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">System</h1>
+        <p class="page-sub">Device information, resources, logs, and maintenance</p>
+      </div>
+      <button>Export diagnostics</button>
+    </div>
+
+    <div class="section-head" style="margin-top:0">
+      <h2>Device</h2>
+    </div>
+
+    <div class="info-grid">
+      <div class="info-tile">
+        <div class="info-tile-label">Hostname</div>
+        <div class="info-tile-value">${MOCK.system.hostname}</div>
+        <div class="info-tile-sub">${MOCK.system.hostname}.local</div>
+      </div>
+      <div class="info-tile">
+        <div class="info-tile-label">Serial</div>
+        <div class="info-tile-value">${MOCK.system.serial}</div>
+        <div class="info-tile-sub">printed on device</div>
+      </div>
+      <div class="info-tile">
+        <div class="info-tile-label">License</div>
+        <div class="info-tile-value info">${MOCK.system.license_tier}</div>
+        <div class="info-tile-sub">activated</div>
+      </div>
+      <div class="info-tile">
+        <div class="info-tile-label">Version</div>
+        <div class="info-tile-value">v${MOCK.system.version}</div>
+        <div class="info-tile-sub">stable channel</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>Resources</h2>
+      <span class="section-sub">live · updates every second</span>
+    </div>
+
+    <div class="resource-grid">
+      <div class="resource-tile">
+        <div class="resource-head">
+          <span class="resource-label">CPU</span>
+          <span class="resource-value ${cpuLevel}" data-tick="cpu">${cpu}%</span>
+        </div>
+        <div class="resource-bar">
+          <div class="resource-bar-fill ${cpuLevel}" style="width: ${cpu}%"></div>
+        </div>
+        <div class="resource-sub">4 cores · 2.4GHz</div>
+      </div>
+      <div class="resource-tile">
+        <div class="resource-head">
+          <span class="resource-label">Memory</span>
+          <span class="resource-value ${memLevel}" data-tick="mem">${mem}%</span>
+        </div>
+        <div class="resource-bar">
+          <div class="resource-bar-fill ${memLevel}" style="width: ${mem}%"></div>
+        </div>
+        <div class="resource-sub">${(mem * 0.08).toFixed(1)} / 8.0 GB</div>
+      </div>
+      <div class="resource-tile">
+        <div class="resource-head">
+          <span class="resource-label">Temperature</span>
+          <span class="resource-value ${tempLevel}" data-tick="temp">${temp}°C</span>
+        </div>
+        <div class="resource-bar">
+          <div class="resource-bar-fill ${tempLevel}" style="width: ${(temp / 100) * 100}%"></div>
+        </div>
+        <div class="resource-sub">throttle at 80°C</div>
+      </div>
+      <div class="resource-tile">
+        <div class="resource-head">
+          <span class="resource-label">Disk</span>
+          <span class="resource-value">${diskPct}%</span>
+        </div>
+        <div class="resource-bar">
+          <div class="resource-bar-fill" style="width: ${diskPct}%"></div>
+        </div>
+        <div class="resource-sub">${MOCK.system.disk_free_gb} GB free of ${MOCK.system.disk_total_gb} GB</div>
+      </div>
+    </div>
+
+    <div class="sys-split">
+
+      <div>
+        <div class="section-head" style="margin-top:0">
+          <h2>System logs</h2>
+          <span class="section-sub" id="log-status">
+            <span style="color:var(--accent)">● streaming</span>
+          </span>
+        </div>
+        <div class="card log-card">
+          <div class="log-controls">
+            <input class="log-search" id="log-search" placeholder="filter by message, source, or level…">
+            <button class="filter-pill" id="pause-log">⏸ pause</button>
+            <button class="filter-pill" id="clear-log">clear</button>
+            <button class="filter-pill">⬇ download</button>
+          </div>
+          <div class="log-viewer" id="sys-log"></div>
+          <div class="log-foot">
+            <span id="log-stats">0 lines shown</span>
+            <span>journalctl · last 1000 entries</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-head" style="margin-top:0">
+          <h2>Software update</h2>
+        </div>
+        <div class="card">
+          <div class="update-status has-update">
+            <div class="update-info">
+              <div class="update-version">v0.4.3 available</div>
+              <div class="update-meta">current v0.4.2 · stable channel · 18 MB</div>
+            </div>
+            <button class="primary">Install</button>
+          </div>
+          <div style="margin-top:12px;font-size:12px;color:var(--text-1);line-height:1.6">
+            <strong style="color:var(--text-0)">What's new:</strong>
+            <ul style="margin:4px 0 0;padding-left:18px">
+              <li>Improved hand tracking accuracy at distance</li>
+              <li>Faster custom model loading (cold start ~40% reduced)</li>
+              <li>Fix: rare OSC duplicate messages on motion zone exit</li>
+            </ul>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:11px;color:var(--text-2);font-family:var(--font-mono)">
+            <span>auto-check daily · last checked 18min ago</span>
+            <a href="#" style="color:var(--accent);text-decoration:none">release notes</a>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2>License</h2>
+        </div>
+        <div class="card">
+          <div class="field-row">
+            <span class="field-label">Tier</span>
+            <div class="field-control">
+              <span class="pill info">${MOCK.system.license_tier}</span>
+            </div>
+          </div>
+          <div class="field-row">
+            <span class="field-label">Serial</span>
+            <div class="field-control" style="font-family:var(--font-mono);font-size:12px">${MOCK.system.serial}</div>
+          </div>
+          <div class="field-row">
+            <span class="field-label">Activated</span>
+            <div class="field-control" style="font-family:var(--font-mono);font-size:12px">Mar 14, 2026</div>
+          </div>
+          <div class="field-row">
+            <span class="field-label">Cloud training</span>
+            <div class="field-control">
+              <span class="pill ok"><span class="dot ok"></span>included</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="section-head">
+      <h2 style="color:var(--danger)">Maintenance</h2>
+    </div>
+
+    <div class="danger-zone">
+      <div class="danger-zone-head">⚠ destructive actions</div>
+
+      <div class="danger-row">
+        <div class="info">
+          <div class="name">Restart pipeline</div>
+          <div class="desc">Stop and restart the detection pipeline. OSC streams will briefly drop for 2–5 seconds.</div>
+        </div>
+        <button id="btn-restart">Restart pipeline</button>
+      </div>
+
+      <div class="danger-row">
+        <div class="info">
+          <div class="name">Reboot device</div>
+          <div class="desc">Reboot the Raspberry Pi. Device will be unreachable for ~60–90 seconds.</div>
+        </div>
+        <button id="btn-reboot">Reboot device</button>
+      </div>
+
+      <div class="danger-row">
+        <div class="info">
+          <div class="name">Factory reset</div>
+          <div class="desc">Erase all configurations, models, and settings. License activation is preserved. <strong style="color:var(--danger)">Cannot be undone.</strong></div>
+        </div>
+        <button class="danger" id="btn-factory-reset">Factory reset</button>
+      </div>
+    </div>
+
+    ${renderConfirmModal()}
+  `;
+
+  mount('system', mainHTML);
+  attachHandlers();
+}
+
+function attachHandlers() {
+  // Log search
+  const search = document.getElementById('log-search');
+  if (search) {
+    search.oninput = () => { SYS.query = search.value; };
+  }
+
+  // Pause / clear
+  document.getElementById('pause-log')?.addEventListener('click', () => {
+    SYS.paused = !SYS.paused;
+    const pauseBtn = document.getElementById('pause-log');
+    pauseBtn.classList.toggle('on');
+    pauseBtn.textContent = SYS.paused ? '▶ resume' : '⏸ pause';
+    const status = document.getElementById('log-status');
+    if (status) {
+      status.innerHTML = SYS.paused
+        ? '<span style="color:var(--warn)">⏸ paused</span>'
+        : '<span style="color:var(--accent)">● streaming</span>';
+    }
+  });
+  document.getElementById('clear-log')?.addEventListener('click', () => {
+    const log = document.getElementById('sys-log');
+    if (log) log.innerHTML = '';
+  });
+
+  // Confirm modal triggers
+  document.getElementById('btn-restart')?.addEventListener('click', () => {
+    SYS.confirmModal = 'restart'; renderPage();
+  });
+  document.getElementById('btn-reboot')?.addEventListener('click', () => {
+    SYS.confirmModal = 'reboot'; renderPage();
+  });
+  document.getElementById('btn-factory-reset')?.addEventListener('click', () => {
+    SYS.confirmModal = 'factory-reset';
+    SYS.resetConfirmText = '';
+    renderPage();
+  });
+
+  // Modal handlers
+  document.getElementById('modal-cancel')?.addEventListener('click', () => {
+    SYS.confirmModal = null;
+    SYS.resetConfirmText = '';
+    renderPage();
+  });
+  document.getElementById('modal-bd')?.addEventListener('click', (e) => {
+    if (e.target.id === 'modal-bd') {
+      SYS.confirmModal = null;
+      SYS.resetConfirmText = '';
+      renderPage();
+    }
+  });
+  document.getElementById('modal-confirm')?.addEventListener('click', () => {
+    SYS.confirmModal = null;
+    SYS.resetConfirmText = '';
+    renderPage();
+  });
+  document.getElementById('confirm-text')?.addEventListener('input', (e) => {
+    SYS.resetConfirmText = e.target.value;
+    // re-render only the confirm button state without flicker
+    const btn = document.getElementById('modal-confirm');
+    if (btn) {
+      const ok = SYS.resetConfirmText === 'RESET';
+      btn.disabled = !ok;
+      btn.style.opacity = ok ? '' : '0.4';
+      btn.style.pointerEvents = ok ? '' : 'none';
+    }
+  });
+
+  // Pre-seed log
+  setTimeout(() => {
+    for (let i = 0; i < 30; i++) tickLog();
+  }, 50);
+  setInterval(tickLog, 600);
+
+  // Resource tickers (CPU/mem/temp re-render every second)
+  setInterval(() => {
+    if (SYS.confirmModal) return;
+    document.querySelectorAll('[data-tick="cpu"]').forEach(el => {
+      const v = jitter(MOCK.device.cpu, 6);
+      el.textContent = v + '%';
+    });
+    document.querySelectorAll('[data-tick="mem"]').forEach(el => {
+      const v = jitter(MOCK.device.mem, 3);
+      el.textContent = v + '%';
+    });
+    document.querySelectorAll('[data-tick="temp"]').forEach(el => {
+      const v = jitter(MOCK.device.temp, 2);
+      el.textContent = v + '°C';
+    });
+  }, 1500);
+}
+
+renderPage();
+</script>
+</body>
+</html>

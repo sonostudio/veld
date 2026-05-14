@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>oak studio · dashboard</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  .dash-top {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 1000px) {
+    .dash-top { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  .status-tile {
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+  }
+  .status-tile-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-2); margin-bottom: 8px;
+  }
+  .status-tile-value {
+    font-size: 22px; font-weight: 500; font-family: var(--font-mono);
+    color: var(--text-0); letter-spacing: -0.02em;
+  }
+  .status-tile-sub {
+    font-size: 11px; color: var(--text-1); margin-top: 6px;
+    font-family: var(--font-mono);
+  }
+
+  .section-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin: 24px 0 12px;
+  }
+  .section-head h2 {
+    font-size: 14px; font-weight: 500; margin: 0;
+    color: var(--text-0);
+  }
+  .section-head .section-sub {
+    font-size: 11px; color: var(--text-2); font-family: var(--font-mono);
+  }
+
+  .camera-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+  @media (max-width: 900px) {
+    .camera-grid { grid-template-columns: 1fr; }
+  }
+
+  .cam-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: border-color 0.1s, background 0.1s;
+    display: flex; flex-direction: column; gap: 12px;
+    text-decoration: none; color: inherit;
+  }
+  .cam-card:hover {
+    border-color: var(--border);
+    background: var(--bg-2);
+  }
+  .cam-card.offline { opacity: 0.55; }
+
+  .cam-card-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+  }
+  .cam-card-id {
+    font-family: var(--font-mono); font-size: 11px; color: var(--text-2);
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .cam-card-title {
+    font-size: 15px; font-weight: 500; margin: 2px 0 0;
+  }
+
+  .cam-card-preview {
+    aspect-ratio: 16 / 9;
+    background: #0a0a0b;
+    border-radius: var(--radius-sm);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--border-soft);
+  }
+  .cam-card-preview svg { width: 100%; height: 100%; display: block; }
+  .cam-card-preview-empty {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-3); font-size: 11px; font-family: var(--font-mono);
+  }
+
+  .cam-card-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px; padding-top: 4px;
+  }
+  .cam-stat {
+    display: flex; flex-direction: column; gap: 2px;
+  }
+  .cam-stat-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-2);
+  }
+  .cam-stat-value {
+    font-size: 14px; font-weight: 500; font-family: var(--font-mono);
+    color: var(--text-0);
+  }
+
+  .cam-card-models {
+    display: flex; gap: 4px; flex-wrap: wrap;
+    padding-top: 4px;
+  }
+  .model-chip {
+    font-size: 10px; font-family: var(--font-mono);
+    padding: 2px 7px; border-radius: var(--radius-sm);
+    background: var(--accent-bg); color: var(--accent);
+    border: 1px solid rgba(93,202,165,0.15);
+  }
+  .model-chip.empty {
+    background: transparent; color: var(--text-3);
+    border-color: var(--border-soft);
+  }
+
+  .cam-card-issue {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--warn-bg);
+    border: 1px solid rgba(239,159,39,0.2);
+    border-radius: var(--radius-sm);
+    font-size: 11px; color: var(--warn);
+  }
+
+  .bottom-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  @media (max-width: 900px) {
+    .bottom-row { grid-template-columns: 1fr; }
+  }
+
+  .osc-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .osc-target {
+    font-family: var(--font-mono); font-size: 15px;
+    color: var(--text-0);
+  }
+  .osc-target .ip { color: var(--accent); }
+  .osc-target .arrow { color: var(--text-3); margin: 0 6px; }
+  .osc-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+  .osc-stat { display: flex; flex-direction: column; gap: 4px; }
+  .osc-stat-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-2);
+  }
+  .osc-stat-value {
+    font-size: 18px; font-weight: 500; font-family: var(--font-mono);
+    color: var(--text-0);
+  }
+  .osc-stat-sub {
+    font-size: 10px; color: var(--text-2); font-family: var(--font-mono);
+  }
+
+  .event-feed {
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 14px 0;
+    max-height: 320px; overflow-y: auto;
+  }
+  .event-feed-head {
+    padding: 0 18px 12px;
+    border-bottom: 1px solid var(--border-soft);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .event-feed-head h2 { font-size: 14px; font-weight: 500; margin: 0; }
+  .event-feed-list {
+    display: flex; flex-direction: column;
+  }
+  .event-row {
+    display: flex; gap: 12px;
+    padding: 10px 18px;
+    border-bottom: 1px solid var(--border-soft);
+    font-size: 12px;
+    align-items: flex-start;
+  }
+  .event-row:last-child { border-bottom: none; }
+  .event-time {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-3); white-space: nowrap;
+    padding-top: 1px; flex-shrink: 0; width: 96px;
+  }
+  .event-icon {
+    width: 6px; height: 6px; border-radius: 50%;
+    margin-top: 5px; flex-shrink: 0;
+  }
+  .event-icon.ok { background: var(--accent); }
+  .event-icon.warn { background: var(--warn); }
+  .event-icon.danger { background: var(--danger); }
+  .event-icon.info { background: var(--info); }
+  .event-text {
+    color: var(--text-1); line-height: 1.5;
+  }
+  .event-text .highlight { color: var(--text-0); }
+
+  .quick-actions {
+    display: flex; gap: 8px; flex-wrap: wrap;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+
+<script src="app.js"></script>
+<script>
+const EVENTS = [
+  { time: 'today  14:23', type: 'ok',     text: '<span class="highlight">red_ball_v3</span> deployed to cam 1 and cam 2' },
+  { time: 'today  14:18', type: 'warn',   text: 'cam 3 FPS dropped below 20 — too many Pi-side models active' },
+  { time: 'today  13:55', type: 'info',   text: '<span class="highlight">gallery_objects</span> training complete · ready to deploy' },
+  { time: 'today  13:42', type: 'danger', text: 'cam 4 disconnected — check USB cable' },
+  { time: 'today  12:30', type: 'ok',     text: 'OSC target updated to <span class="highlight">192.168.1.100:7000</span>' },
+  { time: 'today  11:15', type: 'ok',     text: 'Pipeline restarted by user' },
+  { time: 'today  10:48', type: 'info',   text: '<span class="highlight">dancer_props_v2</span> training started' },
+  { time: 'today  09:30', type: 'ok',     text: 'System booted · 3 cameras detected' },
+  { time: 'May 13  22:14', type: 'ok',    text: 'Pipeline stopped for the night' },
+  { time: 'May 13  16:02', type: 'warn',  text: 'cam 2 reconnected after USB drop' },
+  { time: 'May 13  14:45', type: 'info',  text: '<span class="highlight">red_ball_v2</span> archived · replaced by v3' },
+  { time: 'May 12  11:08', type: 'ok',    text: 'Firmware updated to v0.4.2' },
+];
+
+function getActiveModelChips(camId) {
+  const cam = MOCK.cameras.find(c => c.id === camId);
+  if (!cam || cam.status === 'offline') return [];
+  return MOCK.models
+    .filter(m => m.enabled_on.includes(camId))
+    .map(m => m.id);
+}
+
+function renderCamPreview(cam) {
+  if (cam.status === 'offline') {
+    return `<div class="cam-card-preview-empty">— offline —</div>`;
+  }
+
+  const active = getActiveModelChips(cam.id);
+  if (active.length === 0) {
+    return `<div class="cam-card-preview-empty">no models active</div>`;
+  }
+
+  let overlays = '';
+  if (active.includes('pose')) {
+    overlays += `
+      <g stroke="#5DCAA5" stroke-width="1" fill="none">
+        <circle cx="155" cy="60" r="7" fill="#5DCAA5" fill-opacity="0.2"/>
+        <line x1="155" y1="67" x2="155" y2="115"/>
+        <line x1="155" y1="78" x2="135" y2="105"/>
+        <line x1="155" y1="78" x2="175" y2="105"/>
+        <line x1="155" y1="115" x2="142" y2="155"/>
+        <line x1="155" y1="115" x2="168" y2="155"/>
+      </g>`;
+  }
+  if (active.includes('object')) {
+    overlays += `<rect x="290" y="135" width="32" height="22" stroke="#EF9F27" stroke-width="0.7" fill="#EF9F27" fill-opacity="0.08" stroke-dasharray="3 2"/>`;
+  }
+  if (active.includes('depth')) {
+    overlays += `
+      <rect x="40" y="30" width="100" height="140" fill="#1D9E75" fill-opacity="0.04" stroke="#1D9E75" stroke-width="0.5" stroke-dasharray="3 2"/>
+      <rect x="260" y="30" width="100" height="140" fill="#534AB7" fill-opacity="0.04" stroke="#534AB7" stroke-width="0.5" stroke-dasharray="3 2"/>`;
+  }
+  if (active.includes('motion')) {
+    overlays += `<rect x="30" y="20" width="340" height="160" fill="none" stroke="#EF9F27" stroke-width="0.4" stroke-dasharray="2 2" opacity="0.4"/>`;
+  }
+  if (active.includes('hand')) {
+    overlays += `
+      <g stroke="#F0997B" stroke-width="0.8" fill="none">
+        <circle cx="195" cy="105" r="2.5" fill="#F0997B"/>
+        <line x1="195" y1="105" x2="203" y2="98"/>
+        <line x1="195" y1="105" x2="208" y2="102"/>
+        <line x1="195" y1="105" x2="208" y2="108"/>
+      </g>`;
+  }
+
+  return `
+    <svg viewBox="0 0 400 200" preserveAspectRatio="xMidYMid slice">
+      <rect width="400" height="200" fill="#0e0e10"/>
+      <g opacity="0.2">
+        <line x1="0" y1="50" x2="400" y2="50" stroke="#444" stroke-width="0.5"/>
+        <line x1="0" y1="100" x2="400" y2="100" stroke="#444" stroke-width="0.5"/>
+        <line x1="0" y1="150" x2="400" y2="150" stroke="#444" stroke-width="0.5"/>
+        <line x1="100" y1="0" x2="100" y2="200" stroke="#444" stroke-width="0.5"/>
+        <line x1="200" y1="0" x2="200" y2="200" stroke="#444" stroke-width="0.5"/>
+        <line x1="300" y1="0" x2="300" y2="200" stroke="#444" stroke-width="0.5"/>
+      </g>
+      ${overlays}
+      <g fill="#fff" opacity="0.6" font-family="monospace" font-size="5">
+        <text x="6" y="194">${cam.fps} fps · ${cam.latency} ms</text>
+      </g>
+    </svg>`;
+}
+
+function renderCameraCard(cam) {
+  const isOffline = cam.status === 'offline';
+  const chips = getActiveModelChips(cam.id);
+  const chipsHTML = chips.length > 0
+    ? chips.map(id => {
+        const model = MOCK.models.find(m => m.id === id);
+        return `<span class="model-chip">${model.name}</span>`;
+      }).join('')
+    : `<span class="model-chip empty">no models active</span>`;
+
+  const issueBanner = cam.issue
+    ? `<div class="cam-card-issue">⚠ ${cam.issue}</div>`
+    : '';
+
+  return `
+    <a class="cam-card ${isOffline ? 'offline' : ''}" href="cameras.html">
+      <div class="cam-card-head">
+        <div>
+          <div class="cam-card-id">cam ${cam.id}</div>
+          <div class="cam-card-title">${cam.model}</div>
+        </div>
+        <span class="pill ${isOffline ? 'danger' : 'ok'}">
+          <span class="dot ${isOffline ? 'danger' : 'ok'}"></span>${cam.status}
+        </span>
+      </div>
+      <div class="cam-card-preview">${renderCamPreview(cam)}</div>
+      ${issueBanner}
+      <div class="cam-card-stats">
+        <div class="cam-stat">
+          <span class="cam-stat-label">FPS</span>
+          <span class="cam-stat-value" data-tick="fps" data-cam-id="${cam.id}">${isOffline ? '—' : cam.fps}</span>
+        </div>
+        <div class="cam-stat">
+          <span class="cam-stat-label">Latency</span>
+          <span class="cam-stat-value" data-tick="latency" data-cam-id="${cam.id}">${isOffline ? '—' : cam.latency + 'ms'}</span>
+        </div>
+        <div class="cam-stat">
+          <span class="cam-stat-label">Models</span>
+          <span class="cam-stat-value">${chips.length}</span>
+        </div>
+      </div>
+      <div class="cam-card-models">${chipsHTML}</div>
+    </a>
+  `;
+}
+
+function renderDashboard() {
+  const onlineCams = MOCK.cameras.filter(c => c.status === 'online').length;
+  const totalModels = MOCK.cameras.reduce((s, c) =>
+    s + (c.status === 'online' ? MOCK.models.filter(m => m.enabled_on.includes(c.id)).length : 0), 0);
+
+  const eventsHTML = EVENTS.map(e => `
+    <div class="event-row">
+      <span class="event-time">${e.time}</span>
+      <span class="event-icon ${e.type}"></span>
+      <span class="event-text">${e.text}</span>
+    </div>
+  `).join('');
+
+  const mainHTML = `
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Device status, camera health, and recent activity</p>
+      </div>
+      <div class="quick-actions">
+        <button>Restart pipeline</button>
+        <button class="primary">View OSC monitor</button>
+      </div>
+    </div>
+
+    <div class="dash-top">
+      <div class="status-tile">
+        <div class="status-tile-label">Device</div>
+        <div class="status-tile-value" style="color: var(--accent)">online</div>
+        <div class="status-tile-sub">uptime ${fmtUptime(MOCK.device.uptime_s)}</div>
+      </div>
+      <div class="status-tile">
+        <div class="status-tile-label">Cameras</div>
+        <div class="status-tile-value">${onlineCams} / 4</div>
+        <div class="status-tile-sub">${onlineCams === 4 ? 'all online' : (4 - onlineCams) + ' offline'}</div>
+      </div>
+      <div class="status-tile">
+        <div class="status-tile-label">Models active</div>
+        <div class="status-tile-value">${totalModels}</div>
+        <div class="status-tile-sub">across ${onlineCams} cameras</div>
+      </div>
+      <div class="status-tile">
+        <div class="status-tile-label">OSC rate</div>
+        <div class="status-tile-value">↑ <span data-tick="osc-rate">${MOCK.osc.messages_per_sec}</span></div>
+        <div class="status-tile-sub">msgs / second</div>
+      </div>
+    </div>
+
+    <div class="section-head">
+      <h2>Cameras</h2>
+      <span class="section-sub">click any card to configure →</span>
+    </div>
+
+    <div class="camera-grid">
+      ${MOCK.cameras.map(renderCameraCard).join('')}
+    </div>
+
+    <div class="bottom-row">
+      <div>
+        <div class="section-head">
+          <h2>OSC output</h2>
+          <a href="osc.html" class="section-sub" style="color: var(--text-1); text-decoration: none">configure →</a>
+        </div>
+        <div class="osc-card">
+          <div>
+            <div class="osc-target">
+              <span class="ip">${MOCK.device.ip}</span>
+              <span class="arrow">→</span>
+              <span class="ip">${MOCK.osc.target_ip}:${MOCK.osc.target_port}</span>
+            </div>
+            <div style="font-size:11px;color:var(--text-2);margin-top:4px;font-family:var(--font-mono)">
+              prefix ${MOCK.osc.address_prefix} · ${MOCK.osc.fps} fps
+            </div>
+          </div>
+          <div class="osc-stats">
+            <div class="osc-stat">
+              <span class="osc-stat-label">rate</span>
+              <span class="osc-stat-value">↑ <span data-tick="osc-rate">${MOCK.osc.messages_per_sec}</span></span>
+              <span class="osc-stat-sub">msgs/sec</span>
+            </div>
+            <div class="osc-stat">
+              <span class="osc-stat-label">last seen</span>
+              <span class="osc-stat-value">2s</span>
+              <span class="osc-stat-sub">ago</span>
+            </div>
+            <div class="osc-stat">
+              <span class="osc-stat-label">status</span>
+              <span class="osc-stat-value" style="color: var(--accent)">live</span>
+              <span class="osc-stat-sub">streaming</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="section-head">
+          <h2>Recent activity</h2>
+          <span class="section-sub">last 7 days</span>
+        </div>
+        <div class="event-feed">
+          <div class="event-feed-list">${eventsHTML}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  mount('dashboard', mainHTML);
+  startTickers();
+}
+
+renderDashboard();
+</script>
+</body>
+</html>

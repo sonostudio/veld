@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>oak studio · custom models</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* List */
+  .models-top {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px;
+    margin-bottom: 20px;
+  }
+  @media (max-width: 800px) { .models-top { grid-template-columns: repeat(2, 1fr); } }
+
+  .model-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .model-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 16px 18px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .model-card.training { border-color: rgba(127,119,221,0.25); }
+  .model-card.archived { opacity: 0.5; }
+
+  .model-card-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 12px;
+  }
+  .model-card-name {
+    font-size: 15px; font-weight: 500; font-family: var(--font-mono);
+    color: var(--text-0); display: flex; align-items: center; gap: 8px;
+  }
+  .model-card-meta {
+    font-size: 11px; color: var(--text-2); font-family: var(--font-mono);
+    margin-top: 4px;
+  }
+
+  .status-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 11px; padding: 3px 10px; border-radius: var(--radius);
+    font-family: var(--font-mono); flex-shrink: 0;
+  }
+  .status-pill::before { content: ""; width: 6px; height: 6px; border-radius: 50%; }
+  .status-pill.deployed { background: var(--accent-bg); color: var(--accent); }
+  .status-pill.deployed::before { background: var(--accent); }
+  .status-pill.ready    { background: var(--info-bg);   color: var(--info); }
+  .status-pill.ready::before    { background: var(--info); }
+  .status-pill.training { background: var(--info-bg);   color: var(--info); }
+  .status-pill.training::before { background: var(--info); animation: pulse 1.4s infinite; }
+  .status-pill.archived { background: var(--bg-3); color: var(--text-2); }
+  .status-pill.archived::before { background: var(--text-3); }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+  .class-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+  .class-tag {
+    font-size: 11px; padding: 3px 9px; border-radius: var(--radius-sm);
+    background: var(--bg-2); color: var(--text-1);
+    border: 1px solid var(--border-soft); font-family: var(--font-mono);
+  }
+
+  .model-card-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 10px; padding-top: 4px;
+    border-top: 1px solid var(--border-soft);
+  }
+  .deploy-cams {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; color: var(--text-1);
+  }
+  .deploy-cams .label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-2); margin-right: 2px;
+  }
+  .cam-chip-small {
+    font-size: 11px; padding: 2px 7px; border-radius: var(--radius-sm);
+    font-family: var(--font-mono); cursor: pointer;
+    background: var(--bg-2); color: var(--text-2);
+    border: 1px solid var(--border-soft); line-height: 1.3;
+  }
+  .cam-chip-small.on {
+    background: var(--accent-bg); color: var(--accent);
+    border-color: rgba(93,202,165,0.2);
+  }
+  .deploy-actions { display: flex; gap: 6px; }
+
+  /* Training progress */
+  .training-progress {
+    display: flex; flex-direction: column; gap: 8px;
+    background: var(--bg-2); border-radius: var(--radius);
+    padding: 10px 12px;
+  }
+  .training-progress-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; color: var(--text-1); font-family: var(--font-mono);
+  }
+  .progress-bar {
+    height: 4px; background: var(--bg-3); border-radius: 2px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; background: var(--info); border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+  .training-meta {
+    display: flex; gap: 14px; font-size: 11px; color: var(--text-2);
+    font-family: var(--font-mono);
+  }
+  .training-meta .val { color: var(--text-0); }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+  }
+  .modal {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    width: 560px; max-width: 92vw; max-height: 88vh;
+    overflow-y: auto;
+    padding: 24px 28px;
+  }
+  .modal-head {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .modal-title { font-size: 17px; font-weight: 500; margin: 0; }
+  .modal-sub { font-size: 12px; color: var(--text-1); margin: 4px 0 0; }
+  .modal-close {
+    background: transparent; border: none; color: var(--text-2);
+    font-size: 18px; cursor: pointer; padding: 2px 8px;
+  }
+  .modal-close:hover { color: var(--text-0); }
+
+  /* Wizard steps */
+  .wizard-stepper {
+    display: flex; gap: 4px; margin-bottom: 24px;
+  }
+  .step-pill {
+    flex: 1; padding: 8px 10px; border-radius: var(--radius);
+    background: var(--bg-2); color: var(--text-2);
+    font-size: 11px; font-family: var(--font-mono);
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid transparent;
+  }
+  .step-pill.active {
+    background: var(--accent-bg); color: var(--accent);
+    border-color: rgba(93,202,165,0.2);
+  }
+  .step-pill.done {
+    color: var(--text-1);
+  }
+  .step-pill .num {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--bg-3); display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: var(--text-0); flex-shrink: 0;
+  }
+  .step-pill.active .num { background: var(--accent-dim); color: #fff; }
+  .step-pill.done .num { background: var(--accent-dim); color: #fff; }
+
+  .wizard-step {
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .wizard-step h3 { font-size: 14px; font-weight: 500; margin: 0; }
+  .wizard-step p { font-size: 12px; color: var(--text-1); line-height: 1.6; margin: 0; }
+  .wizard-step .form-row label {
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-2); margin-bottom: 6px; display: block;
+  }
+  .wizard-step input[type="text"] { width: 100%; }
+  .wizard-step .helper {
+    font-size: 11px; color: var(--text-2); margin-top: 4px;
+    font-family: var(--font-mono);
+  }
+
+  .roboflow-link {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-2); border-radius: var(--radius);
+    font-size: 12px; color: var(--text-1);
+  }
+  .roboflow-link a { color: var(--accent); text-decoration: none; }
+  .roboflow-link a:hover { text-decoration: underline; }
+
+  .dataset-preview {
+    background: var(--bg-2); border-radius: var(--radius);
+    padding: 14px;
+  }
+  .dataset-preview-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .dataset-preview-row {
+    display: flex; justify-content: space-between;
+    padding: 6px 0; font-size: 12px;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .dataset-preview-row:last-child { border-bottom: none; }
+  .dataset-preview-row .k { color: var(--text-1); }
+  .dataset-preview-row .v { color: var(--text-0); font-family: var(--font-mono); }
+
+  .training-config {
+    background: var(--bg-2); border-radius: var(--radius); padding: 14px;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .training-config .field-row { border-bottom: 1px solid var(--border-soft); padding: 8px 0; }
+  .training-config .field-row:last-child { border-bottom: none; }
+
+  .wizard-foot {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 20px; padding-top: 16px;
+    border-top: 1px solid var(--border-soft);
+  }
+
+  .cost-callout {
+    background: var(--warn-bg); border: 1px solid rgba(239,159,39,0.2);
+    border-radius: var(--radius); padding: 10px 12px;
+    font-size: 12px; color: var(--text-0); line-height: 1.6;
+  }
+  .cost-callout strong { color: var(--warn); }
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+
+<script src="app.js"></script>
+<script>
+const WIZARD = { open: false, step: 1 };
+
+function renderTrainingBar(progress) {
+  const eta = Math.round((100 - progress) * 1.3);
+  return `
+    <div class="training-progress">
+      <div class="training-progress-row">
+        <span>training in progress</span>
+        <span>${progress}%</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-bar-fill" style="width: ${progress}%"></div>
+      </div>
+      <div class="training-meta">
+        <span>epoch <span class="val">${Math.round(progress * 0.5)} / 50</span></span>
+        <span>loss <span class="val">${(0.8 - progress * 0.006).toFixed(3)}</span></span>
+        <span>eta <span class="val">~${eta}m</span></span>
+      </div>
+    </div>
+  `;
+}
+
+function renderModelCard(m) {
+  const classChips = m.classes.map(c => `<span class="class-tag">${c}</span>`).join('');
+
+  let foot = '';
+  if (m.status === 'deployed') {
+    const cams = [1, 2, 3, 4].map(cid => {
+      const on = m.deployed_to.includes(cid);
+      return `<span class="cam-chip-small ${on ? 'on' : ''}" data-model="${m.id}" data-cam="${cid}">cam ${cid}</span>`;
+    }).join('');
+    foot = `
+      <div class="model-card-foot">
+        <div class="deploy-cams">
+          <span class="label">deployed to</span>
+          ${cams}
+        </div>
+        <div class="deploy-actions">
+          <button>Undeploy all</button>
+          <button>Archive</button>
+        </div>
+      </div>
+    `;
+  } else if (m.status === 'ready') {
+    foot = `
+      <div class="model-card-foot">
+        <span style="font-size:12px;color:var(--text-1)">Trained ${m.trained}, ${m.size}</span>
+        <div class="deploy-actions">
+          <button>Archive</button>
+          <button class="primary">Deploy to camera</button>
+        </div>
+      </div>
+    `;
+  } else if (m.status === 'archived') {
+    foot = `
+      <div class="model-card-foot">
+        <span style="font-size:12px;color:var(--text-2)">Trained ${m.trained}, ${m.size}</span>
+        <div class="deploy-actions">
+          <button>Restore</button>
+          <button class="danger">Delete</button>
+        </div>
+      </div>
+    `;
+  }
+
+  const trainingBlock = m.status === 'training'
+    ? `<div style="margin-top:4px">${renderTrainingBar(m.progress)}</div>`
+    : '';
+
+  return `
+    <div class="model-card ${m.status}">
+      <div class="model-card-head">
+        <div>
+          <div class="model-card-name">${m.name}</div>
+          <div class="model-card-meta">
+            ${m.classes.length} class${m.classes.length === 1 ? '' : 'es'}
+            ${m.status !== 'training' ? '· trained ' + m.trained : ''}
+            ${m.status !== 'training' ? '· ' + m.size : ''}
+          </div>
+        </div>
+        <span class="status-pill ${m.status}">${m.status}</span>
+      </div>
+      <div class="class-tags">${classChips}</div>
+      ${trainingBlock}
+      ${foot}
+    </div>
+  `;
+}
+
+function renderWizardStep1() {
+  return `
+    <div class="wizard-step">
+      <div>
+        <h3>Connect your Roboflow dataset</h3>
+        <p>Annotate your training images in Roboflow, then paste the project URL or dataset version here. Custom YOLO training runs on the cloud training environment included with your subscription.</p>
+      </div>
+
+      <div class="roboflow-link">
+        <span>↗</span>
+        <span>Don't have a Roboflow project yet?</span>
+        <a href="#">Open Roboflow</a>
+      </div>
+
+      <div class="form-row">
+        <label>Roboflow project URL or dataset version</label>
+        <input type="text" placeholder="https://app.roboflow.com/my-workspace/my-project/3" />
+        <div class="helper">paste the link from Roboflow project page</div>
+      </div>
+
+      <div class="form-row">
+        <label>API key (one-time, saved to device)</label>
+        <input type="text" placeholder="rf_••••••••••••••••" />
+        <div class="helper">found in Roboflow → workspace settings → API</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderWizardStep2() {
+  return `
+    <div class="wizard-step">
+      <div>
+        <h3>Review dataset</h3>
+        <p>Confirm the dataset details before training. You can adjust training parameters or return to Roboflow to update annotations.</p>
+      </div>
+
+      <div class="dataset-preview">
+        <div class="dataset-preview-head">
+          <strong style="font-size:13px;color:var(--text-0)">gallery_objects · v4</strong>
+          <span class="status-pill ready">ready to train</span>
+        </div>
+        <div class="dataset-preview-row"><span class="k">Classes</span><span class="v">painting, sculpture, visitor</span></div>
+        <div class="dataset-preview-row"><span class="k">Training images</span><span class="v">847</span></div>
+        <div class="dataset-preview-row"><span class="k">Validation images</span><span class="v">121</span></div>
+        <div class="dataset-preview-row"><span class="k">Test images</span><span class="v">61</span></div>
+        <div class="dataset-preview-row"><span class="k">Annotations</span><span class="v">2,314 bounding boxes</span></div>
+        <div class="dataset-preview-row"><span class="k">Average per image</span><span class="v">2.3 objects</span></div>
+      </div>
+
+      <div class="form-row">
+        <label>Model name</label>
+        <input type="text" value="gallery_objects_v1" />
+        <div class="helper">used to identify this model in the OSC output and web UI</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderWizardStep3() {
+  return `
+    <div class="wizard-step">
+      <div>
+        <h3>Training configuration</h3>
+        <p>Choose a base model and training duration. Smaller models run faster on the OAK-D VPU; larger models are more accurate but use more compute.</p>
+      </div>
+
+      <div class="training-config">
+        <div class="field-row">
+          <span class="field-label">Base model</span>
+          <div class="field-control">
+            <div style="display:flex;gap:4px">
+              <span class="filter-pill on">YOLOv8n</span>
+              <span class="filter-pill">YOLOv8s</span>
+              <span class="filter-pill">YOLOv8m</span>
+            </div>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">Epochs</span>
+          <div class="field-control">
+            <input type="range" min="10" max="200" value="50">
+            <span class="field-val">50</span>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">Image size</span>
+          <div class="field-control">
+            <div style="display:flex;gap:4px">
+              <span class="filter-pill">320</span>
+              <span class="filter-pill on">416</span>
+              <span class="filter-pill">640</span>
+            </div>
+          </div>
+        </div>
+        <div class="field-row">
+          <span class="field-label">Auto-convert to OAK blob</span>
+          <div class="field-control"><button class="toggle on"></button></div>
+        </div>
+      </div>
+
+      <div class="cost-callout">
+        <strong>Estimated training</strong>: ~65 minutes on cloud GPU · included in your subscription
+      </div>
+    </div>
+  `;
+}
+
+function renderWizard() {
+  if (!WIZARD.open) return '';
+  const stepContent = WIZARD.step === 1 ? renderWizardStep1()
+                    : WIZARD.step === 2 ? renderWizardStep2()
+                    : renderWizardStep3();
+
+  return `
+    <div class="modal-backdrop" id="modal-bd">
+      <div class="modal">
+        <div class="modal-head">
+          <div>
+            <h2 class="modal-title">Train a new custom model</h2>
+            <p class="modal-sub">Roboflow annotation → cloud training → automatic deployment</p>
+          </div>
+          <button class="modal-close" id="wizard-close">×</button>
+        </div>
+
+        <div class="wizard-stepper">
+          <div class="step-pill ${WIZARD.step === 1 ? 'active' : (WIZARD.step > 1 ? 'done' : '')}">
+            <span class="num">${WIZARD.step > 1 ? '✓' : '1'}</span> Connect dataset
+          </div>
+          <div class="step-pill ${WIZARD.step === 2 ? 'active' : (WIZARD.step > 2 ? 'done' : '')}">
+            <span class="num">${WIZARD.step > 2 ? '✓' : '2'}</span> Review
+          </div>
+          <div class="step-pill ${WIZARD.step === 3 ? 'active' : ''}">
+            <span class="num">3</span> Configure & train
+          </div>
+        </div>
+
+        ${stepContent}
+
+        <div class="wizard-foot">
+          <button id="wizard-back" ${WIZARD.step === 1 ? 'style="visibility:hidden"' : ''}>← Back</button>
+          <button class="primary" id="wizard-next">
+            ${WIZARD.step === 3 ? 'Start training →' : 'Next →'}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderPage() {
+  const deployed = MOCK.custom_models.filter(m => m.status === 'deployed').length;
+  const ready    = MOCK.custom_models.filter(m => m.status === 'ready').length;
+  const training = MOCK.custom_models.filter(m => m.status === 'training').length;
+  const archived = MOCK.custom_models.filter(m => m.status === 'archived').length;
+
+  const mainHTML = `
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Custom models</h1>
+        <p class="page-sub">Train and deploy custom YOLO models from your Roboflow datasets</p>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button>Open Roboflow ↗</button>
+        <button class="primary" id="new-model-btn">+ Train new model</button>
+      </div>
+    </div>
+
+    <div class="models-top">
+      <div class="metric">
+        <div class="metric-label">Deployed</div>
+        <div class="metric-value">${deployed}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Ready</div>
+        <div class="metric-value">${ready}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Training</div>
+        <div class="metric-value">${training}</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Archived</div>
+        <div class="metric-value">${archived}</div>
+      </div>
+    </div>
+
+    <div class="model-list">
+      ${MOCK.custom_models.map(renderModelCard).join('')}
+    </div>
+
+    ${renderWizard()}
+  `;
+
+  mount('models', mainHTML);
+  attachHandlers();
+}
+
+function attachHandlers() {
+  document.getElementById('new-model-btn')?.addEventListener('click', () => {
+    WIZARD.open = true;
+    WIZARD.step = 1;
+    renderPage();
+  });
+
+  document.getElementById('wizard-close')?.addEventListener('click', () => {
+    WIZARD.open = false;
+    renderPage();
+  });
+
+  document.getElementById('modal-bd')?.addEventListener('click', (e) => {
+    if (e.target.id === 'modal-bd') {
+      WIZARD.open = false;
+      renderPage();
+    }
+  });
+
+  document.getElementById('wizard-next')?.addEventListener('click', () => {
+    if (WIZARD.step < 3) {
+      WIZARD.step++;
+      renderPage();
+    } else {
+      // Submit — close and add new training model to mock
+      WIZARD.open = false;
+      MOCK.custom_models.unshift({
+        id: 'cm-new',
+        name: 'gallery_objects_v1',
+        status: 'training',
+        classes: ['painting', 'sculpture', 'visitor'],
+        trained: '—', size: '—', deployed_to: [], progress: 2
+      });
+      renderPage();
+    }
+  });
+
+  document.getElementById('wizard-back')?.addEventListener('click', () => {
+    if (WIZARD.step > 1) { WIZARD.step--; renderPage(); }
+  });
+
+  // Cam chips on deployed models — toggle deployment
+  document.querySelectorAll('.cam-chip-small').forEach(c => {
+    c.onclick = () => {
+      const mId = c.dataset.model;
+      const cId = parseInt(c.dataset.cam, 10);
+      const m = MOCK.custom_models.find(x => x.id === mId);
+      if (m.deployed_to.includes(cId)) {
+        m.deployed_to = m.deployed_to.filter(id => id !== cId);
+      } else {
+        m.deployed_to.push(cId);
+        m.deployed_to.sort();
+      }
+      renderPage();
+    };
+  });
+
+  // Filter pill toggles in wizard
+  document.querySelectorAll('.filter-pill').forEach(p => {
+    p.onclick = () => {
+      if (p.parentElement.classList.contains('field-control') ||
+          p.parentElement.style.display === 'flex') {
+        p.parentElement.querySelectorAll('.filter-pill').forEach(s => s.classList.remove('on'));
+        p.classList.add('on');
+      }
+    };
+  });
+
+  // Toggles
+  document.querySelectorAll('.toggle').forEach(t => {
+    t.onclick = () => t.classList.toggle('on');
+  });
+}
+
+// Animate training progress
+setInterval(() => {
+  let updated = false;
+  MOCK.custom_models.forEach(m => {
+    if (m.status === 'training' && m.progress < 100) {
+      m.progress = Math.min(100, m.progress + 1);
+      updated = true;
+      if (m.progress === 100) {
+        m.status = 'ready';
+        m.trained = 'just now';
+        m.size = (4 + Math.random() * 3).toFixed(1) + ' MB';
+      }
+    }
+  });
+  if (updated && !WIZARD.open) renderPage();
+}, 2000);
+
+renderPage();
+</script>
+</body>
+</html>

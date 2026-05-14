@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>oak studio · network</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* Current status panel */
+  .status-panel {
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 18px 22px;
+    margin-bottom: 20px;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 20px;
+    align-items: center;
+  }
+  @media (max-width: 800px) { .status-panel { grid-template-columns: repeat(2, 1fr); } }
+  .status-block { display: flex; flex-direction: column; gap: 4px; }
+  .status-block .label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em;
+    color: var(--text-2);
+  }
+  .status-block .value {
+    font-size: 18px; font-family: var(--font-mono); color: var(--text-0);
+    font-weight: 500;
+  }
+  .status-block .sub {
+    font-size: 11px; color: var(--text-1); font-family: var(--font-mono);
+  }
+  .status-block .value.active { color: var(--accent); }
+
+  /* Mode selector */
+  .mode-selector {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+    margin-bottom: 16px;
+  }
+  .mode-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 18px 20px;
+    cursor: pointer;
+    display: flex; flex-direction: column; gap: 6px;
+    transition: border-color 0.1s, background 0.1s;
+  }
+  .mode-card:hover {
+    border-color: var(--border);
+    background: var(--bg-2);
+  }
+  .mode-card.active {
+    border-color: var(--accent-dim);
+    background: rgba(93,202,165,0.05);
+  }
+  .mode-card-head {
+    display: flex; justify-content: space-between; align-items: center;
+    gap: 8px;
+  }
+  .mode-card-title {
+    font-size: 14px; font-weight: 500; color: var(--text-0);
+  }
+  .mode-card-desc {
+    font-size: 12px; color: var(--text-1); line-height: 1.5; margin: 0;
+  }
+  .mode-radio {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 1.5px solid var(--text-3);
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .mode-card.active .mode-radio { border-color: var(--accent); }
+  .mode-card.active .mode-radio::after {
+    content: ""; width: 7px; height: 7px; border-radius: 50%;
+    background: var(--accent);
+  }
+
+  /* Split layout */
+  .net-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 16px;
+  }
+  @media (max-width: 1000px) { .net-split { grid-template-columns: 1fr; } }
+
+  /* WiFi scanner */
+  .wifi-list {
+    display: flex; flex-direction: column;
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg-2);
+  }
+  .wifi-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    cursor: pointer;
+    transition: background 0.1s;
+    gap: 12px;
+  }
+  .wifi-row:last-child { border-bottom: none; }
+  .wifi-row:hover { background: var(--bg-3); }
+  .wifi-row.selected { background: rgba(93,202,165,0.08); }
+  .wifi-row.connected { background: rgba(93,202,165,0.05); }
+  .wifi-name {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 13px; color: var(--text-0); min-width: 0;
+  }
+  .wifi-name .ssid {
+    font-family: var(--font-mono); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .wifi-meta {
+    display: flex; align-items: center; gap: 12px;
+    flex-shrink: 0;
+  }
+  .wifi-tag {
+    font-size: 10px; padding: 2px 6px; border-radius: var(--radius-sm);
+    font-family: var(--font-mono); color: var(--accent);
+    background: var(--accent-bg); border: 1px solid rgba(93,202,165,0.2);
+  }
+  .wifi-tag.secured {
+    color: var(--text-2); background: var(--bg-1); border-color: var(--border-soft);
+  }
+  .wifi-signal {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-2); min-width: 32px; text-align: right;
+  }
+  .wifi-bars {
+    display: inline-flex; align-items: flex-end; gap: 2px;
+    height: 12px;
+  }
+  .wifi-bars .bar {
+    width: 3px; background: var(--text-3); border-radius: 1px;
+  }
+  .wifi-bars .bar.on { background: var(--text-0); }
+  .wifi-bars .bar:nth-child(1) { height: 4px; }
+  .wifi-bars .bar:nth-child(2) { height: 7px; }
+  .wifi-bars .bar:nth-child(3) { height: 10px; }
+  .wifi-bars .bar:nth-child(4) { height: 12px; }
+
+  .wifi-scan-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 8px;
+    font-size: 11px; color: var(--text-2); font-family: var(--font-mono);
+  }
+  .scan-spinner {
+    display: inline-block;
+    animation: spin 1.5s linear infinite;
+  }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .manual-ssid-row {
+    margin-top: 10px;
+    display: flex; gap: 8px; align-items: center;
+    font-size: 12px; color: var(--text-2);
+  }
+  .manual-ssid-row a { color: var(--accent); cursor: pointer; }
+
+  /* Password input with reveal */
+  .pw-input {
+    position: relative;
+    display: flex; align-items: center;
+  }
+  .pw-input input {
+    flex: 1; padding-right: 60px;
+  }
+  .pw-input .reveal {
+    position: absolute; right: 8px;
+    background: transparent; border: none; color: var(--text-2);
+    font-size: 11px; cursor: pointer; font-family: var(--font-mono);
+    padding: 2px 6px;
+  }
+  .pw-input .reveal:hover { color: var(--text-0); }
+
+  /* IP config */
+  .ip-config {
+    transition: opacity 0.2s;
+  }
+  .ip-config.disabled {
+    opacity: 0.4; pointer-events: none;
+  }
+
+  /* Apply bar */
+  .apply-bar {
+    display: flex; justify-content: space-between; align-items: center;
+    background: var(--bg-1);
+    border: 1px solid var(--border-soft);
+    border-radius: var(--radius-lg);
+    padding: 12px 16px;
+    margin-top: 20px;
+  }
+  .apply-bar.has-changes {
+    border-color: rgba(239,159,39,0.3);
+    background: rgba(239,159,39,0.04);
+  }
+  .apply-bar .changes-status {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px;
+  }
+  .apply-bar .changes-status.no-changes { color: var(--text-2); }
+  .apply-bar .changes-status.has-changes { color: var(--warn); }
+
+  /* Warning banner */
+  .warning-banner {
+    background: var(--warn-bg);
+    border: 1px solid rgba(239,159,39,0.2);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 12px; color: var(--text-0); line-height: 1.6;
+    display: flex; align-items: flex-start; gap: 10px;
+    margin-bottom: 16px;
+  }
+  .warning-banner strong { color: var(--warn); }
+
+  .conn-test {
+    margin-top: 16px;
+    background: var(--bg-2);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+    font-size: 12px; color: var(--text-1);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .conn-test .results {
+    display: flex; gap: 14px; font-family: var(--font-mono);
+  }
+  .conn-test .result-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+</style>
+</head>
+<body>
+<div id="app-root"></div>
+
+<script src="app.js"></script>
+<script>
+const NET_STATE = {
+  mode: 'ethernet',
+  ipMode: 'fixed',
+  fixedIp: '192.168.1.42',
+  gateway: '192.168.1.1',
+  netmask: '255.255.255.0',
+  dns: '1.1.1.1',
+  hostname: 'oak-studio-pi',
+  mdns: true,
+  wifiSsid: 'studio-net-5g',
+  wifiPassword: '••••••••••••',
+  showPassword: false,
+  hasChanges: false,
+};
+
+const WIFI_NETWORKS = [
+  { ssid: 'studio-net-5g',     signal: 4, secured: true,  connected: false, freq: '5GHz' },
+  { ssid: 'studio-net-2.4g',   signal: 3, secured: true,  connected: false, freq: '2.4GHz' },
+  { ssid: 'guest-wifi',        signal: 3, secured: false, connected: false, freq: '5GHz' },
+  { ssid: 'venue-staff',       signal: 2, secured: true,  connected: false, freq: '5GHz' },
+  { ssid: 'cafe-down-the-st',  signal: 1, secured: true,  connected: false, freq: '2.4GHz' },
+];
+
+let scanRunning = false;
+
+function markDirty() {
+  NET_STATE.hasChanges = true;
+  renderPage();
+}
+
+function renderWifiBars(signal) {
+  return `<span class="wifi-bars">
+    ${[1,2,3,4].map(i => `<span class="bar ${i <= signal ? 'on' : ''}"></span>`).join('')}
+  </span>`;
+}
+
+function renderWifiList() {
+  return WIFI_NETWORKS.map(n => {
+    const isSelected = NET_STATE.wifiSsid === n.ssid;
+    return `
+      <div class="wifi-row ${isSelected ? 'selected' : ''}" data-ssid="${n.ssid}">
+        <div class="wifi-name">
+          ${renderWifiBars(n.signal)}
+          <span class="ssid">${n.ssid}</span>
+          ${isSelected ? '<span class="wifi-tag">selected</span>' : ''}
+        </div>
+        <div class="wifi-meta">
+          <span class="wifi-tag secured">${n.secured ? '🔒 WPA2' : 'open'}</span>
+          <span class="wifi-signal">${n.freq}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPage() {
+  const isWifi = NET_STATE.mode === 'wifi';
+  const isFixed = NET_STATE.ipMode === 'fixed';
+
+  const mainHTML = `
+    <div class="page-head">
+      <div>
+        <h1 class="page-title">Network</h1>
+        <p class="page-sub">Configure how the device connects to your network</p>
+      </div>
+      <button>Test connection</button>
+    </div>
+
+    <div class="status-panel">
+      <div class="status-block">
+        <span class="label">Status</span>
+        <span class="value active">connected</span>
+        <span class="sub">up for 4h 23m</span>
+      </div>
+      <div class="status-block">
+        <span class="label">Current IP</span>
+        <span class="value">192.168.1.42</span>
+        <span class="sub">ethernet · fixed</span>
+      </div>
+      <div class="status-block">
+        <span class="label">Gateway</span>
+        <span class="value">192.168.1.1</span>
+        <span class="sub">ping ~2ms</span>
+      </div>
+      <div class="status-block">
+        <span class="label">Internet</span>
+        <span class="value active">reachable</span>
+        <span class="sub">DNS via 1.1.1.1</span>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top:0">
+      <h2>Connection mode</h2>
+    </div>
+
+    <div class="mode-selector">
+      <div class="mode-card ${!isWifi ? 'active' : ''}" data-mode="ethernet">
+        <div class="mode-card-head">
+          <span class="mode-card-title">Ethernet</span>
+          <span class="mode-radio"></span>
+        </div>
+        <p class="mode-card-desc">Wired connection. Recommended for installations — most stable, lowest latency.</p>
+      </div>
+      <div class="mode-card ${isWifi ? 'active' : ''}" data-mode="wifi">
+        <div class="mode-card-head">
+          <span class="mode-card-title">WiFi</span>
+          <span class="mode-radio"></span>
+        </div>
+        <p class="mode-card-desc">Wireless connection. Useful when running cables isn't possible.</p>
+      </div>
+    </div>
+
+    <div class="net-split">
+
+      <div>
+        ${isWifi ? `
+          <div class="section-head" style="margin-top:0">
+            <h2>WiFi network</h2>
+          </div>
+          <div class="card">
+            <div class="wifi-scan-head">
+              <span>${scanRunning ? '<span class="scan-spinner">⟳</span> scanning…' : `${WIFI_NETWORKS.length} networks found`}</span>
+              <button class="filter-pill" id="rescan-btn">⟳ rescan</button>
+            </div>
+            <div class="wifi-list">${renderWifiList()}</div>
+            <div class="manual-ssid-row">
+              network not listed? <a id="manual-ssid-link">enter SSID manually</a>
+            </div>
+
+            <div class="form-row" style="margin-top:18px">
+              <label>Password for "${NET_STATE.wifiSsid}"</label>
+              <div class="pw-input">
+                <input type="${NET_STATE.showPassword ? 'text' : 'password'}"
+                       value="${NET_STATE.wifiPassword}"
+                       id="wifi-password">
+                <button class="reveal" id="reveal-btn">${NET_STATE.showPassword ? 'hide' : 'show'}</button>
+              </div>
+            </div>
+          </div>
+        ` : `
+          <div class="section-head" style="margin-top:0">
+            <h2>Ethernet</h2>
+          </div>
+          <div class="card">
+            <div class="field-row">
+              <span class="field-label">Cable connected</span>
+              <div class="field-control">
+                <span class="pill ok"><span class="dot ok"></span>yes</span>
+              </div>
+            </div>
+            <div class="field-row">
+              <span class="field-label">Link speed</span>
+              <div class="field-control">
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-0)">1000 Mbps full duplex</span>
+              </div>
+            </div>
+            <div class="field-row">
+              <span class="field-label">MAC address</span>
+              <div class="field-control">
+                <span style="font-family:var(--font-mono);font-size:12px;color:var(--text-1)">d8:3a:dd:7f:c2:a4</span>
+              </div>
+            </div>
+          </div>
+        `}
+      </div>
+
+      <div>
+        <div class="section-head" style="margin-top:0">
+          <h2>IP configuration</h2>
+        </div>
+        <div class="card">
+          <div class="field-row">
+            <span class="field-label">Assignment</span>
+            <div class="field-control">
+              <div style="display:flex;gap:4px">
+                <span class="filter-pill ${NET_STATE.ipMode === 'dhcp' ? 'on' : ''}" data-ip-mode="dhcp">automatic (DHCP)</span>
+                <span class="filter-pill ${NET_STATE.ipMode === 'fixed' ? 'on' : ''}" data-ip-mode="fixed">fixed IP</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="ip-config ${isFixed ? '' : 'disabled'}">
+            <div class="field-row">
+              <span class="field-label">IP address</span>
+              <div class="field-control">
+                <input type="text" value="${NET_STATE.fixedIp}" style="width:160px;text-align:right;font-family:var(--font-mono)">
+              </div>
+            </div>
+            <div class="field-row">
+              <span class="field-label">Subnet mask</span>
+              <div class="field-control">
+                <input type="text" value="${NET_STATE.netmask}" style="width:160px;text-align:right;font-family:var(--font-mono)">
+              </div>
+            </div>
+            <div class="field-row">
+              <span class="field-label">Gateway</span>
+              <div class="field-control">
+                <input type="text" value="${NET_STATE.gateway}" style="width:160px;text-align:right;font-family:var(--font-mono)">
+              </div>
+            </div>
+            <div class="field-row">
+              <span class="field-label">DNS server</span>
+              <div class="field-control">
+                <input type="text" value="${NET_STATE.dns}" style="width:160px;text-align:right;font-family:var(--font-mono)">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2>Discovery</h2>
+        </div>
+        <div class="card">
+          <div class="field-row">
+            <span class="field-label">Hostname</span>
+            <div class="field-control">
+              <input type="text" value="${NET_STATE.hostname}" style="width:180px;text-align:right;font-family:var(--font-mono)">
+            </div>
+          </div>
+          <div class="field-row">
+            <span class="field-label">mDNS / Bonjour</span>
+            <div class="field-control">
+              <button class="toggle ${NET_STATE.mdns ? 'on' : ''}" id="mdns-toggle"></button>
+            </div>
+          </div>
+          <div class="field-row">
+            <span class="field-label">Reachable as</span>
+            <div class="field-control">
+              <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent)">${NET_STATE.hostname}.local</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="conn-test">
+          <span>connectivity test</span>
+          <div class="results">
+            <span class="result-pill" style="color:var(--accent)">● gateway 2ms</span>
+            <span class="result-pill" style="color:var(--accent)">● dns 14ms</span>
+            <span class="result-pill" style="color:var(--accent)">● internet</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    ${NET_STATE.hasChanges ? `
+      <div class="warning-banner">
+        <span>⚠</span>
+        <div>
+          <strong>Network changes will restart the network interface.</strong>
+          The device may briefly become unreachable. If you misconfigure the IP, you may lose access — keep a backup connection (ethernet cable, monitor) handy.
+        </div>
+      </div>
+    ` : ''}
+
+    <div class="apply-bar ${NET_STATE.hasChanges ? 'has-changes' : ''}">
+      <span class="changes-status ${NET_STATE.hasChanges ? 'has-changes' : 'no-changes'}">
+        ${NET_STATE.hasChanges ? '⚠ unsaved changes' : '✓ no unsaved changes'}
+      </span>
+      <div style="display:flex;gap:8px">
+        <button id="revert-btn" ${!NET_STATE.hasChanges ? 'disabled style="opacity:0.4"' : ''}>Revert</button>
+        <button class="primary" id="apply-btn" ${!NET_STATE.hasChanges ? 'disabled style="opacity:0.4"' : ''}>Apply and restart network</button>
+      </div>
+    </div>
+  `;
+
+  mount('network', mainHTML);
+  attachHandlers();
+}
+
+function attachHandlers() {
+  // Mode selector
+  document.querySelectorAll('.mode-card[data-mode]').forEach(c => {
+    c.onclick = () => {
+      const newMode = c.dataset.mode;
+      if (newMode !== NET_STATE.mode) {
+        NET_STATE.mode = newMode;
+        markDirty();
+      }
+    };
+  });
+
+  // WiFi network select
+  document.querySelectorAll('.wifi-row[data-ssid]').forEach(r => {
+    r.onclick = () => {
+      const ssid = r.dataset.ssid;
+      if (ssid !== NET_STATE.wifiSsid) {
+        NET_STATE.wifiSsid = ssid;
+        NET_STATE.wifiPassword = '';
+        markDirty();
+      }
+    };
+  });
+
+  // Rescan
+  document.getElementById('rescan-btn')?.addEventListener('click', () => {
+    scanRunning = true;
+    renderPage();
+    setTimeout(() => { scanRunning = false; renderPage(); }, 1500);
+  });
+
+  // Password reveal
+  document.getElementById('reveal-btn')?.addEventListener('click', () => {
+    NET_STATE.showPassword = !NET_STATE.showPassword;
+    renderPage();
+  });
+
+  // Password input
+  document.getElementById('wifi-password')?.addEventListener('input', (e) => {
+    if (e.target.value !== NET_STATE.wifiPassword) {
+      NET_STATE.wifiPassword = e.target.value;
+      NET_STATE.hasChanges = true;
+      // don't full re-render on every keystroke
+    }
+  });
+
+  // IP mode pills
+  document.querySelectorAll('[data-ip-mode]').forEach(p => {
+    p.onclick = () => {
+      const newMode = p.dataset.ipMode;
+      if (newMode !== NET_STATE.ipMode) {
+        NET_STATE.ipMode = newMode;
+        markDirty();
+      }
+    };
+  });
+
+  // mDNS toggle
+  document.getElementById('mdns-toggle')?.addEventListener('click', () => {
+    NET_STATE.mdns = !NET_STATE.mdns;
+    markDirty();
+  });
+
+  // Text inputs mark dirty on change
+  document.querySelectorAll('input[type="text"]').forEach(inp => {
+    if (inp.id !== 'wifi-password') {
+      inp.addEventListener('input', () => {
+        NET_STATE.hasChanges = true;
+        document.querySelector('.apply-bar').classList.add('has-changes');
+        const status = document.querySelector('.changes-status');
+        if (status) {
+          status.className = 'changes-status has-changes';
+          status.textContent = '⚠ unsaved changes';
+        }
+        document.getElementById('apply-btn').removeAttribute('disabled');
+        document.getElementById('apply-btn').style.opacity = '';
+        document.getElementById('revert-btn').removeAttribute('disabled');
+        document.getElementById('revert-btn').style.opacity = '';
+      });
+    }
+  });
+
+  // Apply
+  document.getElementById('apply-btn')?.addEventListener('click', () => {
+    if (!NET_STATE.hasChanges) return;
+    NET_STATE.hasChanges = false;
+    renderPage();
+  });
+
+  // Revert
+  document.getElementById('revert-btn')?.addEventListener('click', () => {
+    NET_STATE.hasChanges = false;
+    renderPage();
+  });
+}
+
+renderPage();
+</script>
+</body>
+</html>
